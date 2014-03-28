@@ -76,8 +76,8 @@ form.form-inline {
                         <td>{{row.service_name|default:'-' }}</td>
                     {% endif %}
                     <td>{{row.invoice_date|default:'-' }}</td>
+                    <td>{{row.invoice_no|default:'-' }}</td>
                     {% if mode == 'dc' %}
-                        <td>{{row.invoice_no|default:'-' }}</td>
                         <td>{{row.order_no|default:'-' }}</td>
                         <td>{{row.price}}</td>
                         <td>{{row.venture}}</td>

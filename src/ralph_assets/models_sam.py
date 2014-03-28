@@ -137,6 +137,7 @@ class Licence(
     invoice_no = models.CharField(
         max_length=128, db_index=True, null=True, blank=True
     )
+    _used = None
 
     def __unicode__(self):
         return "{} x {} - {}".format(
@@ -154,7 +155,13 @@ class Licence(
 
     @property
     def used(self):
+        if self._used is not None:
+            return self._used
         return self.assets.count() + self.users.count()
+
+    @used.setter
+    def used(self, value):
+        self._used = value
 
 
 class SoftwareCategoryLookup(LookupChannel):

@@ -7,7 +7,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from ajax_select.fields import (
-    AutoCompleteField,
     AutoCompleteSelectField,
     AutoCompleteSelectMultipleField,
     AutoCompleteWidget,
@@ -49,7 +48,7 @@ class SoftwareCategoryWidget(AutoCompleteWidget):
         ).render(name, sc_name, attrs)
 
 
-class SoftwareCategoryField(AutoCompleteField):
+class SoftwareCategoryField(AutoCompleteSelectField):
     """A field that either finds or creates a SoftwareCategory. NOTE:
     these values are *not* saved. The view should save it after validating
     the whole form"""
@@ -81,6 +80,9 @@ class LicenceForm(forms.ModelForm):
     software_category = SoftwareCategoryField(
         ('ralph_assets.models_sam', 'SoftwareCategoryLookup'),
         widget=SoftwareCategoryWidget,
+        plugin_options=dict(
+            add_link='/admin/ralph_assets/softwarecategory/add/?name=',
+        )
     )
 
     assets = AutoCompleteSelectMultipleField(LOOKUPS['asset'], required=False)

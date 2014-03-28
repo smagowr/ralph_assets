@@ -433,8 +433,8 @@ class BackOfficeBulkEditAssetForm(BulkEditAssetForm):
         fields = (
             'type', 'status', 'barcode', 'model', 'user', 'owner', 'warehouse',
             'sn', 'property_of', 'purpose', 'service_name', 'invoice_no',
-            'invoice_date', 'price', 'task_url', 'deprecation_rate',
-            'order_no',
+            'invoice_date', 'price', 'provider', 'task_url',
+            'deprecation_rate', 'order_no',
         )
     purpose = ChoiceField(
         choices=[('', '----')] + models_assets.AssetPurpose(),
@@ -642,13 +642,6 @@ class DependencyAssetForm(DependencyForm):
                 'status',
                 dependency_conditions.Exact(AssetStatus.loan.id),
                 SHOW,
-            ),
-            Dependency(
-                'niw',
-                'barcode',
-                dependency_conditions.NotEmpty(),
-                CLONE,
-                page_load_update=False,
             ),
             Dependency(
                 'owner',

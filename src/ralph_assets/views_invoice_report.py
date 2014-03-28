@@ -8,7 +8,7 @@ from __future__ import unicode_literals
 import datetime
 import logging
 
-from django.db.models import Q
+from django.db.models import Sum, Q
 from django.contrib import messages
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -147,6 +147,7 @@ class BaseInvoiceReport(GenericSearch):
                 "datetime": datetime.datetime.now(),
             },
             "items": self.items,
+            "sum_price": self.items.aggregate(Sum('price')).get('price__sum')
         }
         return data
 

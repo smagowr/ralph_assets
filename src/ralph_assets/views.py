@@ -601,10 +601,10 @@ class _AssetSearchDataTable(_AssetSearch, DataTableMixin):
             _('Service name', field='service_name__name',
               sort_expression='service_name__name', bob_tag=True, export=True,
               show_conditions=show_back_office),
+            _('Invoice no.', field='invoice_no', sort_expression='invoice_no',
+              bob_tag=True, export=True),
             _('Invoice date', field='invoice_date',
               sort_expression='invoice_date', bob_tag=True, export=True),
-            _('Invoice no.', field='invoice_no', sort_expression='invoice_no',
-              bob_tag=True, export=True, show_conditions=show_dc),
             _('Order no.', field='order_no', sort_expression='order_no',
               bob_tag=True, export=True, show_conditions=show_dc),
             _('Price', field='price', sort_expression='price',
@@ -1909,6 +1909,7 @@ class UserDetails(AssetsBase):
     """Detail user profile, relations with assets and licences"""
     template_name = 'assets/user_details.html'
     sidebar_selected = None
+    mainmenu_selected = 'users'
 
     def get(self, request, username, *args, **kwargs):
         try:
@@ -1997,6 +1998,7 @@ class EditUser(AssetsBase):
     template_name = 'assets/user_edit.html'
     caption = _('Edit user relations')
     message = _('Licence changed')
+    mainmenu_selected = 'users'
 
     def prepare(self, username):
         self.user = User.objects.get(username=username)
