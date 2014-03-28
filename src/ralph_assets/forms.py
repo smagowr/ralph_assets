@@ -429,7 +429,7 @@ class BulkEditAssetForm(DependencyForm, ModelForm):
 
 
 class BackOfficeBulkEditAssetForm(BulkEditAssetForm):
-    class Meta:
+    class Meta(BulkEditAssetForm.Meta):
         fields = (
             'type', 'status', 'barcode', 'model', 'user', 'owner', 'warehouse',
             'sn', 'property_of', 'purpose', 'service_name', 'invoice_no',
@@ -444,7 +444,7 @@ class BackOfficeBulkEditAssetForm(BulkEditAssetForm):
 
 
 class DataCenterBulkEditAssetForm(BulkEditAssetForm):
-    class Meta:
+    class Meta(BulkEditAssetForm.Meta):
         fields = (
             'type', 'status', 'barcode', 'model', 'user', 'owner', 'warehouse',
             'sn', 'property_of', 'service_name', 'invoice_no', 'invoice_date',
