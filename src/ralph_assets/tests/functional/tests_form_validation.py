@@ -26,25 +26,25 @@ class TestValidations(TestCase):
     def setUp(self):
         self.client = login_as_su()
         self.category = create_category()
+        self.model = create_model(category=self.category)
         self.first_asset = create_asset(
             sn='1234-1234-1234-1234',
-            category=self.category,
+            model=self.model,
         )
         self.second_asset = create_asset(
             sn='5678-5678-5678-5678',
-            category=self.category,
+            model=self.model,
         )
 
         self.asset_with_duplicated_sn = create_asset(
             sn='1111-1111-1111-1111',
-            category=self.category,
+            model=self.model,
         )
 
         # Prepare required fields (formset_name, field_name)
         self.required_fields = [
             ('asset_form', 'model'),
             ('asset_form', 'warehouse'),
-            ('asset_form', 'category'),
         ]
 
         self.model1 = create_model()
@@ -52,7 +52,7 @@ class TestValidations(TestCase):
     def test_try_send_empty_add_form(self):
         send_post = self.client.post(
             '/assets/back_office/add/device/',
-            {'ralph_device_id': ''},  # Test hock
+            {'ralph_device_id': '', 'sn': 'sn'},  # Test hock
         )
         self.assertEqual(send_post.status_code, 200)
 
@@ -82,6 +82,7 @@ class TestValidations(TestCase):
             'size': 'string',
             'invoice_date': 'string',
             'ralph_device_id': '',
+            'sn': 'string',
         }
         send_post = self.client.post(url, post_data)
         self.assertEqual(send_post.status_code, 200)

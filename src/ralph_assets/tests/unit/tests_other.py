@@ -20,6 +20,7 @@ from ralph_assets.models_sam import (
 from ralph_assets.tests.util import (
     create_asset,
     create_category,
+    create_model,
 )
 from ralph_assets.others import get_assets_rows, get_licences_rows
 
@@ -41,9 +42,10 @@ class TestExportRelations(TestCase):
         self.owner.save()
 
         self.category = create_category()
+        self.model = create_model(category=self.category)
         self.asset = create_asset(
             sn='1111-1111-1111-1111',
-            category=self.category,
+            model=self.model,
             user=self.user,
             owner=self.owner,
             barcode='br-666',
@@ -87,10 +89,10 @@ class TestExportRelations(TestCase):
         self.assertEqual(
             rows,
             [
-                u'id, niw, barcode, sn, category__name, model__manufacturer__n'
-                'ame, model__name, user__username, user__first_name, user__las'
-                't_name, owner__username, owner__first_name, owner__last_name,'
-                ' status, service_name, property_of,\n',
+                u'id, niw, barcode, sn, model__category__name, model__manufact'
+                'urer__name, model__name, user__username, user__first_name, us'
+                'er__last_name, owner__username, owner__first_name, owner__las'
+                't_name, status, service_name, property_of,\n',
                 u'1, niw=666, br-666, 1111-1111-1111-1111, Subcategory, Manufa'
                 'cturer1, Model1, user, Elmer, Stevens, owner, Eric, Brown, 1,'
                 ' None, None, \n',

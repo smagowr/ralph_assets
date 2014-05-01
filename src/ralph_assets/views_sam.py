@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import itertools as it
 import urllib
 
 from bob.data_table import DataTableColumn
@@ -152,6 +153,12 @@ class LicenceList(LicenseSelectedMixin, GenericSearch):
             sort_expression='invoice_date',
         ),
         DataTableColumn(
+            _('Invoice no.'),
+            bob_tag=True,
+            field='invoice_no',
+            sort_expression='invoice_no',
+        ),
+        DataTableColumn(
             _('Valid thru'),
             bob_tag=True,
             field='valid_thru',
@@ -210,10 +217,8 @@ class AddLicence(LicenceFormView):
     def post(self, request, *args, **kwargs):
         self._get_form(request.POST)
         if self.form.is_valid():
-            for sn, niw in zip(
-                self.form.cleaned_data['sn'],
-                self.form.cleaned_data['niw'],
-            ):
+            sns = self.form.cleaned_data['sn'] or it.repeat(None)
+            for sn, niw in zip(sns, self.form.cleaned_data['niw']):
                 self.form.instance.pk = None
                 licence = self.form.save(commit=False)
                 if licence.asset_type is None:
@@ -222,7 +227,7 @@ class AddLicence(LicenceFormView):
                 licence.niw = niw
                 licence.save()
             messages.success(self.request, '{} licences added'.format(len(
-                self.form.cleaned_data['sn'],
+                self.form.cleaned_data['niw'],
             )))
             return HttpResponseRedirect(reverse('licence_list'))
         else:

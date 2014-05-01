@@ -13,6 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.db.models.fields import (
     CharField,
+    DateField,
     DecimalField,
     TextField,
 )
@@ -35,7 +36,19 @@ from ralph_assets.models_assets import (
 )
 from ralph_assets.models_util import add_problem, ProblemSeverity
 from ralph_assets.views import AssetsBase
-from ralph_assets.models import Asset
+from ralph_assets.models import (
+    Asset,
+    AssetCategory,
+    AssetCategoryType,
+    AssetManufacturer,
+    AssetModel,
+)
+
+
+MODE2ASSET_CATEGORY_TYPE = {
+    'dc': AssetCategoryType.data_center,
+    'back_office': AssetCategoryType.back_office,
+}
 
 
 class XlsUploadView(SessionWizardView, AssetsBase):
@@ -79,6 +92,13 @@ class XlsUploadView(SessionWizardView, AssetsBase):
                         mode=self.mode,
                         label=name,
                     )
+                    # set default value if name is the same as one of options
+                    options = filter(
+                        lambda x: x[1].lower().strip() == name.lower().strip(),
+                        form.fields[slugify(name)].choices
+                    )
+                    if options:
+                        form.fields[slugify(name)].initial = options[0][0]
         elif step == 'confirm':
             names_per_sheet, _, _ =\
                 self.get_cleaned_data_for_step('upload')['file']
@@ -149,7 +169,7 @@ class XlsUploadView(SessionWizardView, AssetsBase):
                 return []
             elif (
                 isinstance(field, (TextField, CharField)) and
-                field_name != 'imei'
+                field_name not in ('imei', 'sn')
             ):
                 return ''
             else:
@@ -157,6 +177,10 @@ class XlsUploadView(SessionWizardView, AssetsBase):
         if isinstance(field, DecimalField):
             if value.count(',') == 1 and '.' not in value:
                 value = value.replace(',', '.')
+        if isinstance(field, DateField):
+            if ' ' in value:
+                # change "2012-5-30 13:23:54" to "2012-5-30"
+                value = value.split()[0]
         if field.choices:
             value_lower = value.lower().strip()
             for k, v in field.choices:
@@ -205,6 +229,7 @@ class XlsUploadView(SessionWizardView, AssetsBase):
             amd_field = amd_model = self.AmdModel = None
         for sheet_name, sheet_data in update_per_sheet.items():
             for asset_id, asset_data in sheet_data.items():
+                asset_data = self.update_model(asset_data)
                 try:
                     asset = self.Model.objects.get(pk=asset_id)
                 except ObjectDoesNotExist:
@@ -221,6 +246,7 @@ class XlsUploadView(SessionWizardView, AssetsBase):
                     errors[asset_id] = repr(exc)
         for sheet_name, sheet_data in add_per_sheet.items():
             for asset_data in sheet_data:
+                asset_data = self.update_model(asset_data)
                 not_found_messages = []
                 kwargs = {}
                 amd_kwargs = {}
@@ -279,3 +305,32 @@ class XlsUploadView(SessionWizardView, AssetsBase):
             'assets/xls_upload_wizard_done.html',
             ctx_data
         )
+
+    def update_model(self, data):
+        """Update/add AssetModel and clear asset_data from its fields."""
+        model = data.get('Model', None)
+        category = data.pop('Category', None)
+        manufacturer = data.pop('Manufacturer', None)
+
+        if not model:
+            return data
+
+        kwargs = {'name': model, 'type': MODE2ASSET_TYPE[self.mode]}
+
+        if category:
+            try:
+                category = AssetCategory.objects.get(
+                    name=category,
+                    type=MODE2ASSET_CATEGORY_TYPE[self.mode],
+                )
+            except AssetCategory.DoesNotExist:
+                category = None
+        kwargs['category'] = category
+        if manufacturer:
+            try:
+                manufacturer = AssetManufacturer.objects.get(name=manufacturer)
+            except AssetManufacturer.DoesNotExist:
+                manufacturer = None
+        kwargs['manufacturer'] = manufacturer
+        data['Model'] = AssetModel.objects.get_or_create(**kwargs)[0]
+        return data

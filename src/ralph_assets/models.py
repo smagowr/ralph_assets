@@ -34,6 +34,7 @@ from ralph_assets.models_assets import (
 )
 from ralph_assets.models_sam import (
     Licence,
+    LicenceType,
     SoftwareCategory,
 )
 from ralph_assets.models_history import AssetHistoryChange
@@ -86,7 +87,8 @@ class FreeLicenceLookup(LookupChannel):
 
     model = Licence
 
-    def get_query(self, q, _):
+    def get_query(self, query, request):
+        expression = '%{}%'.format(query)
         return self.model.objects.raw(
             """SELECT
                 ralph_assets_licence.*,
@@ -109,12 +111,15 @@ class FreeLicenceLookup(LookupChannel):
                 ralph_assets_licence.id =
                 ralph_assets_licence_users.licence_id
             )
-            WHERE ralph_assets_softwarecategory.name LIKE %s
+            WHERE
+                ralph_assets_softwarecategory.name LIKE %s
+            OR
+                ralph_assets_licence.niw LIKE %s
             GROUP BY ralph_assets_licence.id
             HAVING used < ralph_assets_licence.number_bought
             LIMIT 10;
             """,
-            ('%{}%'.format(q),)
+            (expression, expression)
         )
 
     def get_result(self, obj):
@@ -231,7 +236,11 @@ class AssetModelLookup(LookupChannel):
 
     def get_query(self, q, request):
         return self.model.objects.filter(
-            Q(name__icontains=q) & Q(type=getattr(self, 'type', None))
+            (
+                Q(manufacturer__name__icontains=q) |
+                Q(category__name__icontains=q) |
+                Q(name__icontains=q)
+            ) & Q(type=self.type)
         ).order_by('name')[:10]
 
     def get_result(self, obj):
@@ -242,12 +251,18 @@ class AssetModelLookup(LookupChannel):
 
     def format_item_display(self, obj):
         manufacturer = getattr(obj, 'manufacturer', None) or '-'
+        category = getattr(obj, 'category', None) or '-'
         return '''
         <li>
             <span>{model}</span>
             <span class='auto-complete-blue'>({manufacturer})</span>
+            <span class='asset-category'>({category})</span>
         </li>
-        '''.format(model=escape(obj.name), manufacturer=escape(manufacturer))
+        '''.format(
+            model=escape(obj.name),
+            manufacturer=escape(manufacturer),
+            category=escape(category),
+        )
 
 
 class DCAssetModelLookup(AssetModelLookup):
@@ -274,6 +289,18 @@ class AssetManufacturerLookup(LookupChannel):
 
     def format_item_display(self, obj):
         return '{}'.format(escape(obj.manufacturer.name))
+
+
+class ManufacturerLookup(LookupChannel):
+    model = AssetManufacturer
+
+    def get_query(self, q, request):
+        return self.model.objects.filter(Q(name__icontains=q)).order_by(
+            'name'
+        )[:10]
+
+    def get_result(self, obj):
+        return obj.name
 
 
 class SoftwareCategoryLookup(LookupChannel):
@@ -415,10 +442,13 @@ __all__ = [
     'AssetType',
     'CoaOemOs',
     'DeviceInfo',
+    'Licence',
+    'LicenceType',
     'OfficeInfo',
     'PartInfo',
     'ReportOdtSource',
     'Service',
+    'SoftwareCategory',
     'Transition',
     'TransitionsHistory',
     'Warehouse',

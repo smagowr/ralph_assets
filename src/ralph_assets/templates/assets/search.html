@@ -3,7 +3,6 @@
 {% load i18n %}
 {% load assets %}
 
-
 {% block sidebar_search%}
     <div class="form search-form well well-small" id="sidebar_search">
         {% trans "Hint: you can use quotation marks for exact matches." %}
@@ -13,6 +12,12 @@
 {% endblock %}
 
 {% block content %}
+    {% if items_count %}
+      <div class="alert alert-info">
+          <strong data-searched-items="{{items_count}}">{{items_count}}</strong>
+          {% trans "items found" %}
+      </div>
+    {% endif %}
     <h3>{{header}}</h3>
         <table id='assets_table' class="table table-bordered table-striped">
         {% table_header columns url_query sort fugue_icons=1 sort_variable_name=sort_variable_name %}

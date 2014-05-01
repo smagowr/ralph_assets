@@ -3,7 +3,6 @@ import datetime
 from south.db import db
 from south.v2 import SchemaMigration
 from django.db import models
-from ralph_assets.models_assets import Asset
 
 
 class Migration(SchemaMigration):
@@ -28,12 +27,13 @@ class Migration(SchemaMigration):
                       keep_default=False)
 
         # Migrate categories from assets to assets models
-        for asset in Asset.objects.values_list(
-            'category_id', 'model_id').filter():
-            db.execute(
-                "UPDATE ralph_assets_assetmodel SET category_id = %s "
-                "WHERE id = %s",
-            asset)
+        if not db.dry_run:
+            for asset in orm.Asset.objects.values_list(
+                'category_id', 'model_id').filter():
+                db.execute(
+                    "UPDATE ralph_assets_assetmodel SET category_id = %s "
+                    "WHERE id = %s",
+                asset)
 
     def backwards(self, orm):
         # Changing field 'Asset.deprecation_rate'

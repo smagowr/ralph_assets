@@ -134,9 +134,8 @@ class ColumnChoiceField(forms.ChoiceField):
     """A field that allows to choose a field from a model."""
 
     def __init__(self, model, mode, *args, **kwargs):
-        kwargs['choices'] = [('', '-----')]
         Model = get_model_by_name(model)
-        kwargs['choices'] += [
+        kwargs['choices'] = [
             (field.name, unicode(field.verbose_name))
             for field in it.chain(Model._meta.fields, Model._meta.many_to_many)
             if field.name != 'id'
@@ -151,6 +150,14 @@ class ColumnChoiceField(forms.ChoiceField):
                 )
                 for field in AmdModel._meta.fields if field.name != 'id'
             ]
+            kwargs['choices'] += [
+                ('model.category', u'category'),
+                ('model.manufacturer', u'manufacturer'),
+            ]
+        kwargs['choices'] = [('', '-----')] + sorted(
+            kwargs['choices'],
+            key=lambda option: option[1],
+        )
         kwargs['required'] = False
         super(ColumnChoiceField, self).__init__(*args, **kwargs)
 

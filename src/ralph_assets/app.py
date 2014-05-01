@@ -31,3 +31,5 @@ class Assets(RalphModule):
             'propagate': True,
             'level': 'DEBUG',
         })
+        self.settings['DEFAULT_DEPRECATION_RATE'] = 25
+        self.settings['SHOW_RALPH_CORES_DIFF'] = True

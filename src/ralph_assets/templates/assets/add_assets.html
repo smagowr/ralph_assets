@@ -26,7 +26,9 @@
 
           {% for field in fields %}
             {% with field=asset_form|get_item:field %}
-              {% if field.html_name not in multivalues_fields or edit_mode %}
+              {% if field.is_hidden %}
+                {{ field }}
+              {% elif field.html_name not in multivalues_fields or edit_mode %}
                 {% field_wrapper field %}
               {% endif %}
             {% endwith %}

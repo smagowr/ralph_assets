@@ -13,10 +13,8 @@
 <form id="{{ form_id }}" class="form form-horizontal" method="POST"{% if edit_mode %} enctype="multipart/form-data"{% endif %} {% dependency_data asset_form %}>
   {% csrf_token %}
   <div class="row-fluid">
-    <div class="span6 well">
-      {% for field in form %}
-        {% field_wrapper field %}
-      {% endfor %}
+    <div class="span6">
+    {% form_as_fieldsets form %}
     </div>
     <div class="span6">
       {% include 'assets/attachment_table.html' with attachment_parent=licence mode=mode parent_name='license' %}
@@ -26,6 +24,25 @@
             {% trans "Licence history"%}
           </a>
         </h6>
+        <h6>{% trans "Assigned users" %}</h6>
+        <table class="table table-bordered">
+          <thead>
+              <tr>
+                  <th>#</th>
+                  <th>{% trans "User" %}</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for user in licence.users.all %}
+              <tr>
+                  <td>{{ forloop.counter }}</td>
+                  <td>
+                    <a href="{% url user_view user.username %}">{{ user.username }}</a>
+                  </td>
+              </tr>
+              {% endfor %}
+          </tbody>
+        </table>
       {% endif %}
     </div>
   </div>

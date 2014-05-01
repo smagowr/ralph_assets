@@ -29,11 +29,6 @@ def transition_history(asset):
     return {'transitions_history': transitions_history}
 
 
-@register.filter
-def get_item(obj, key):
-    return obj[key]
-
-
 @register.inclusion_tag('assets/templatetags/collapsed_form.html')
 def collapsed_form(form):
     """Render a collapsed form."""

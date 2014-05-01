@@ -27,14 +27,18 @@ class TestAdding(TestCase):
 
     def setUp(self):
         self.client = login_as_su()
-        self.model = create_model()
-        self.model2 = create_model('Model2')
+        self.category = create_category()
+        self.model = create_model(
+            category=self.category
+        )
+        self.model2 = create_model(
+            'Model2',
+            category=self.category,
+        )
         self.warehouse = create_warehouse()
         self.warehouse2 = create_warehouse('Warehouse2')
-        self.category = create_category()
         self.asset = create_asset(
-            sn='1111-1111-1111-1111',
-            category=self.category
+            sn='1111-1111-1111-1111'
         )
 
     def get_common_add_form_data(self):
@@ -53,7 +57,6 @@ class TestAdding(TestCase):
             sn='2222-2222-2222-2222',
             barcode='bc-1111-1111-1111',
             warehouse=self.warehouse.id,  # 1
-            category=self.category.slug,
             deprecation_rate=0,
         )
 
@@ -75,7 +78,6 @@ class TestAdding(TestCase):
             warehouse=self.warehouse.id,  # 1
             price=2.00,
             remarks='any remarks',
-            category=self.category.slug,
             asset=True,  # Button name
         )
 
@@ -103,7 +105,6 @@ class TestAdding(TestCase):
         data_in_add_form.update(
             model='Manufacturer1 Model1',
             warehouse='Warehouse',
-            category=self.category.name,
         )
         # Test comparison input data and output data
         for field in data_in_add_form:

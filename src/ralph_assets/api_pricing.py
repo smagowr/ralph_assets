@@ -28,6 +28,10 @@ def get_assets(date):
         device_info = asset.device_info
 
         venture_info = asset.venture
+        is_blade = None
+        if asset.model and asset.model.category:
+            is_blade = asset.model.category.is_blade
+
         yield {
             'asset_id': asset.id,
             'barcode': asset.barcode,
@@ -42,7 +46,7 @@ def get_assets(date):
             'height_of_device': asset.model.height_of_device,
             'warehouse_id': asset.warehouse_id,
             'venture_id': venture_info.id if venture_info else None,
-            'is_blade': asset.category.is_blade if asset.category else None,
+            'is_blade': is_blade,
             'cores_count': asset.cores_count,
         }
 

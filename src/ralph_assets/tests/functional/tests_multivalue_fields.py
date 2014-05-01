@@ -18,8 +18,8 @@ class TestMultivalueFields(TestCase):
     def setUp(self):
         self.client = login_as_su()
         self.warehouse = create_warehouse()
-        self.model = create_model()
         self.category = create_category()
+        self.model = create_model(category=self.category)
         self.addform = '/assets/dc/add/device/'
         self.common_test_data = dict(
             type=AssetType.data_center.id,
@@ -30,7 +30,6 @@ class TestMultivalueFields(TestCase):
             price='10',
             size=1,
             slots=1,
-            category=self.category.slug,
             ralph_device_id='',
             asset=True,
             source=1,
@@ -50,6 +49,10 @@ class TestMultivalueFields(TestCase):
         """
 
         test_data = [
+            dict(
+                sn='', barcode='', remarks='asset0',
+                desc='SN or Barcode required.'
+            ),
             dict(sn='sn1_1, sn2_1, sn1_1', remarks='asset1'),
             dict(sn='sn1_2, , , sn2_2', remarks='asset2'),
             dict(sn='sn1_3, ,, sn2_3', remarks='asset3'),
@@ -88,7 +91,14 @@ class TestMultivalueFields(TestCase):
             test.update(partial_data)
             post = self.client.post(self.addform, test)
             added_assets = Asset.objects.filter(remarks=test['remarks'])
-            if test['remarks'] == 'asset1':
+            if test['remarks'] == 'asset0':
+                self.assertEqual(post.status_code, 200)
+                for field in ['sn', 'barcode']:
+                    self.assertFormError(
+                        post, 'asset_form', field,
+                        SCREEN_ERROR_MESSAGES['any_required'],
+                    )
+            elif test['remarks'] == 'asset1':
                 self.assertEqual(post.status_code, 200)
                 self.assertFormError(
                     post, 'asset_form', 'sn',

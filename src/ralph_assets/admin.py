@@ -68,7 +68,6 @@ class AssetAdmin(ModelAdmin):
     fields = (
         'sn',
         'type',
-        'category',
         'model',
         'status',
         'warehouse',
@@ -97,6 +96,7 @@ class AssetAdmin(ModelAdmin):
         'device_info__ralph_device_id',
     )
     list_display = ('sn', 'model', 'type', 'barcode', 'status', 'deleted')
+    list_filter = ('type',)
 
     def has_delete_permission(self, request, obj=None):
         return False
@@ -107,7 +107,8 @@ admin.site.register(Asset, AssetAdmin)
 
 class AssetModelAdmin(ModelAdmin):
     save_on_top = True
-    list_display = ('name',)
+    list_display = ('name', 'type', 'category')
+    list_filter = ('type', 'category')
     search_fields = ('name',)
 
 
@@ -136,7 +137,8 @@ class AssetCategoryAdmin(ModelAdmin):
         return name
     form = AssetCategoryAdminForm
     save_on_top = True
-    list_display = (name, 'parent', 'slug')
+    list_display = (name, 'parent', 'slug', 'type')
+    list_filter = ('type',)
     search_fields = ('name',)
     prepopulated_fields = {"slug": ("type", "parent", "name")}
 

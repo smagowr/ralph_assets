@@ -34,7 +34,9 @@ class HistoryAssetsView(TestCase):
         self.owner.save()
         self.manufacturer.save()
         self.model = AssetModel(
-            name='test_model', manufacturer=self.manufacturer
+            name='test_model',
+            manufacturer=self.manufacturer,
+            category=self.category,
         )
         self.model.save()
         self.warehouse = Warehouse(name='test_warehouse')
@@ -57,7 +59,6 @@ class HistoryAssetsView(TestCase):
             'warehouse': self.warehouse.id,
             'sn': '666-666-666',
             'barcode': '666666',
-            'category': self.category.slug,
             'asset': True,  # Button name
             'source': 1,
             'deprecation_rate': 0,
@@ -135,7 +136,9 @@ class ConnectAssetWithDevice(TestCase):
         self.manufacturer = AssetManufacturer(name='test_manufacturer')
         self.manufacturer.save()
         self.model = AssetModel(
-            name='test_model', manufacturer=self.manufacturer
+            name='test_model',
+            manufacturer=self.manufacturer,
+            category=self.category,
         )
         self.model.save()
         self.warehouse = Warehouse(name='test_warehouse')
@@ -152,7 +155,6 @@ class ConnectAssetWithDevice(TestCase):
             'price': 10,
             'warehouse': self.warehouse.id,
             'barcode': '7777',
-            'category': self.category.slug,
             'source': 1,
             'deprecation_rate': 0,
             'production_year': 2011,
@@ -216,14 +218,15 @@ class TestsStockDevice(TestCase):
         self.manufacturer = AssetManufacturer(name='test_manufacturer')
         self.manufacturer.save()
         self.model = AssetModel(
-            name='test_model', manufacturer=self.manufacturer
+            name='test_model',
+            manufacturer=self.manufacturer,
+            category=self.category,
         )
         self.model.save()
         self.warehouse = Warehouse(name='test_warehouse')
         self.warehouse.save()
         self.asset_params = {
             'type': AssetType.data_center.id,
-            'category': self.category.slug,
             'model': self.model.id,
             'warehouse': self.warehouse.id,
             'status': AssetStatus.new.id,

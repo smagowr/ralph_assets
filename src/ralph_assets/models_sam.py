@@ -88,6 +88,7 @@ class Licence(
     sn = models.TextField(
         verbose_name=_('SN / Key'),
         null=True,
+        blank=True,
     )
     parent = TreeForeignKey(
         'self',
@@ -98,9 +99,9 @@ class Licence(
     )
     niw = models.CharField(
         max_length=50,
-        null=True,
-        blank=True,
         verbose_name=_('Inventory number'),
+        null=False,
+        unique=True,
     )
     invoice_date = models.DateField(
         verbose_name=_('Invoice date'),
@@ -126,9 +127,13 @@ class Licence(
         ),
     )
     asset_type = models.PositiveSmallIntegerField(
-        choices=AssetType()
+        choices=AssetType(),
+        verbose_name=_('Type'),
     )
-    assets = models.ManyToManyField(Asset)
+    assets = models.ManyToManyField(
+        Asset,
+        verbose_name=_('Assigned Assets'),
+    )
     users = models.ManyToManyField(User)
     attachments = models.ManyToManyField(
         models_assets.Attachment, null=True, blank=True

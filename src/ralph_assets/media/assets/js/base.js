@@ -40,7 +40,10 @@
 
     Bulk.prototype.edit_selected = function() {
         var ids = this.get_ids();
-        if (ids.length) {
+        var selected_all_pages = $('.selected-assets-info-box').data('selected');
+        if (selected_all_pages) {
+            window.location.href = 'bulkedit' + window.location.search + '&from_query=1';
+        } else if (ids.length) {
             window.location.href = 'bulkedit?select=' + ids.join('&select=');
         }
         return false;
@@ -99,16 +102,19 @@
     Bulk.prototype.select_all_pages = function() {
         var selected_box = $('.selected-assets-info-box');
         var selected_all_pages = selected_box.data('selected');
-
         $('.bob-select-all-pages i').toggleClass('fugue-blue-documents-stack fugue-documents-stack');
         $('.bob-select-all-pages span').toggle();
         $(selected_box).toggle();
         selected_all_pages = !selected_all_pages;
         selected_box.data('selected', selected_all_pages);
+        var table = $('#assets_table');
         if (selected_all_pages){
-            $(".bob-select-all").trigger("click");
+            table.find('input[name="select"]').prop('checked', true);
+            table.find('input[name="items"]').prop('checked', true);
         } else {
-            $(".bob-select-none").trigger("click");
+            table.find('input[name="select"]').prop('checked', false);
+            table.find('input[name="items"]').prop('checked', false);
+            table.find('input[name="selectall"]').prop('checked', false);
         }
     };
 
@@ -119,6 +125,12 @@
         $('#post_edit_all').click(function() {
             bulk.edit_selected();
         });
+
+        $('.bob-select-all, .bob-select-toggle, .bob-select-none').click(function() {
+            $('.selected-assets-info-box').hide()
+            $('.selected-assets-info-box').data('selected', false);
+        });
+
         $('#post_invoice_report_selected').click(function() {
             bulk.invoice_report_selected();
         });
@@ -168,9 +180,12 @@
         });
 
         // set status as 'in progress' if user is selected
-        $("div.user_info #id_user").change(function() {
-            if($(this).val() !== "") {
-                $('#id_status option').filter(function () {
+        $("div.user_info #id_user").add('.bulk-table [id$="-user"]').change(function() {
+            var $this = $(this);
+            if($this.val() !== "") {
+                var prefix = $this.attr('id').slice(0, -"user".length);
+                var slave = $('#' + prefix + "status");
+                slave.children('option').filter(function () {
                     return $(this).text() == 'in progress';
                 }).prop('selected', true);
             }

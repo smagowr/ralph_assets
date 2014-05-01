@@ -30,14 +30,12 @@ class TestBulkEdit(TestCase):
         self.category = create_category()
         self.asset = create_asset(
             sn='1111-1111-1111-1111',
-            category=self.category,
         )
         self.asset1 = create_asset(
             sn='2222-2222-2222-2222',
-            category=self.category,
         )
-        self.model = create_model()  # u'Model1'
-        self.model1 = create_model(name='Model2')
+        self.model = create_model(category=self.category)  # u'Model1'
+        self.model1 = create_model(name='Model2', category=self.category)
 
     def test_edit_via_bulkedit_form(self):
         url = '/assets/dc/bulkedit/?select=%s&select=%s' % (

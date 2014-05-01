@@ -12,7 +12,11 @@ from ralph.discovery.models_device import Device, DeviceType
 
 from ralph_assets.api_pricing import get_assets, get_asset_parts
 from ralph_assets.models_assets import PartInfo, AssetModel
-from ralph_assets.tests.util import create_asset, create_category
+from ralph_assets.tests.util import (
+    create_asset,
+    create_category,
+    create_model,
+)
 
 
 class TestModelAsset(TestCase):
@@ -76,6 +80,8 @@ class TestApiAssets(TestCase):
         self.category = create_category()
         self.category.is_blade = True
         self.category.save()
+        self.model = create_model(category=self.category)
+        self.model.save()
         self.asset = create_asset(
             sn='1111-1111-1111-1111',
             invoice_date=datetime.date(2012, 11, 28),
@@ -83,7 +89,7 @@ class TestApiAssets(TestCase):
             slots=12.0,
             price=100,
             deprecation_rate=100,
-            category=self.category,
+            model=self.model,
         )
 
         part_info = PartInfo(device=self.asset)
@@ -96,7 +102,7 @@ class TestApiAssets(TestCase):
             price=100,
             part_info=part_info,
             deprecation_rate=50,
-            category=self.category,
+            model=self.model,
         )
 
     def tests_api_asset(self):

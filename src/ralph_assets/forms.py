@@ -18,11 +18,11 @@ from bob.forms import (
     AJAX_UPDATE,
     CLONE,
     Dependency,
+    dependency_conditions,
     DependencyForm,
     REQUIRE,
     SHOW,
 )
-from bob.forms import dependency_conditions
 from collections import OrderedDict
 from django.core.urlresolvers import reverse
 from django.forms import (
@@ -41,6 +41,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from mptt.forms import TreeNodeChoiceField
+
 from ralph_assets.models import (
     Asset,
     AssetCategory,
@@ -171,8 +172,7 @@ class MultivalFieldForm(ModelForm):
                     msg = "Fields: {} - require the same count".format(
                         ', '.join(self.multival_fields)
                     )
-                    self.errors.setdefault(field, [])
-                    self.errors[field].append(msg)
+                    self.errors.setdefault(field, []).append(msg)
 
     def unique_multival_fields(self, data):
         for field_name in self.multival_fields:
@@ -352,13 +352,6 @@ class BulkEditAssetForm(DependencyForm, ModelForm):
         required=False,
         choices=[('', '----')] + AssetSource(),
     )
-    model = AutoCompleteSelectField(
-        LOOKUPS['asset_model'],
-        required=True,
-        plugin_options=dict(
-            add_link='/admin/ralph_assets/assetmodel/add/?name=',
-        )
-    )
     owner = AutoCompleteSelectField(
         LOOKUPS['asset_user'],
         required=False,
@@ -411,21 +404,6 @@ class BulkEditAssetForm(DependencyForm, ModelForm):
             else:
                 classes = "span12"
             self.fields[field_name].widget.attrs = {'class': classes}
-        group_type = AssetType.from_id(self.instance.type).group.name
-        if group_type == 'DC':
-            self.fields['type'].choices = [
-                (c.id, c.desc) for c in AssetType.DC.choices]
-
-            self.fields['model'].widget.channel = LOOKUPS['asset_dcmodel']
-            del self.fields['type']
-        elif group_type == 'BO':
-            self.fields['model'].widget.channel = LOOKUPS['asset_bomodel']
-            self.fields['type'].choices = [('', '---------')] + [
-                (choice.id, choice.name) for choice in AssetType.BO.choices
-            ]
-
-            self.fields['type'].choices = [
-                (c.id, c.desc) for c in AssetType.BO.choices]
 
 
 class BackOfficeBulkEditAssetForm(BulkEditAssetForm):
@@ -436,20 +414,42 @@ class BackOfficeBulkEditAssetForm(BulkEditAssetForm):
             'invoice_date', 'price', 'provider', 'task_url',
             'deprecation_rate', 'order_no',
         )
+
+    model = AutoCompleteSelectField(
+        LOOKUPS['asset_bomodel'],
+        required=True,
+        plugin_options=dict(
+            add_link='/admin/ralph_assets/assetmodel/add/?name=',
+        )
+    )
     purpose = ChoiceField(
         choices=[('', '----')] + models_assets.AssetPurpose(),
         label='Purpose',
         required=False,
+    )
+    type = ChoiceField(
+        required=True,
+        choices=[('', '----')] + [
+            (choice.id, choice.name) for choice in AssetType.BO.choices
+        ],
     )
 
 
 class DataCenterBulkEditAssetForm(BulkEditAssetForm):
     class Meta(BulkEditAssetForm.Meta):
         fields = (
-            'type', 'status', 'barcode', 'model', 'user', 'owner', 'warehouse',
-            'sn', 'property_of', 'service_name', 'invoice_no', 'invoice_date',
+            'status', 'barcode', 'model', 'user', 'owner', 'warehouse', 'sn',
+            'property_of', 'service_name', 'invoice_no', 'invoice_date',
             'price', 'task_url', 'deprecation_rate', 'order_no',
         )
+
+    model = AutoCompleteSelectField(
+        LOOKUPS['asset_dcmodel'],
+        required=True,
+        plugin_options=dict(
+            add_link='/admin/ralph_assets/assetmodel/add/?name=',
+        )
+    )
 
 
 class DeviceForm(ModelForm):
@@ -593,6 +593,14 @@ class DependencyAssetForm(DependencyForm):
                 SHOW,
             ),
             Dependency(
+                'slots',
+                'category',
+                dependency_conditions.MemberOf(
+                    AssetCategory.objects.filter(is_blade=True).all()
+                ),
+                REQUIRE,
+            ),
+            Dependency(
                 'imei',
                 'category',
                 dependency_conditions.MemberOf(
@@ -616,6 +624,13 @@ class DependencyAssetForm(DependencyForm):
                     ]).all()
                 ),
                 REQUIRE,
+            ),
+            Dependency(
+                'category',
+                'model',
+                dependency_conditions.Any(),
+                AJAX_UPDATE,
+                url=reverse('model_dependency_view'),
             ),
             Dependency(
                 'location',
@@ -684,7 +699,33 @@ class DependencyAssetForm(DependencyForm):
             yield dep
 
 
-class BaseAddAssetForm(DependencyAssetForm, ModelForm):
+class AddEditAssetMixin(object):
+    """
+    Common code for asset's both type forms (Add & Edit).
+    """
+
+    def customize_fields(self):
+        """
+        This is the place for fields customization.
+        Sometimes field can't be set completely during init. (like, change
+        field completition depending on data from request, eg.
+        mode=DataCenter|BackOffice).
+        """
+        if self.mode == "dc":
+            self.fields['model'].widget.plugin_options['add_link'] +=\
+                '&type=' + str(AssetType.data_center.id)
+            self.fields['model'].widget.channel = LOOKUPS['asset_dcmodel']
+            self.fields['type'].choices = [
+                (c.id, c.desc) for c in AssetType.DC.choices]
+        elif self.mode == "back_office":
+            self.fields['model'].widget.plugin_options['add_link'] +=\
+                '&type=' + str(AssetType.back_office.id)
+            self.fields['model'].widget.channel = LOOKUPS['asset_bomodel']
+            self.fields['type'].choices = [
+                (c.id, c.desc) for c in AssetType.BO.choices]
+
+
+class BaseAddAssetForm(DependencyAssetForm, AddEditAssetMixin, ModelForm):
     '''
         Base class to display form used to add new asset
     '''
@@ -694,7 +735,6 @@ class BaseAddAssetForm(DependencyAssetForm, ModelForm):
         fields = (
             'niw',
             'type',
-            'category',
             'imei',
             'model',
             'status',
@@ -762,10 +802,9 @@ class BaseAddAssetForm(DependencyAssetForm, ModelForm):
             add_link='/admin/ralph_assets/warehouse/add/?name=',
         )
     )
-    category = TreeNodeChoiceField(
-        queryset=AssetCategory.tree.all(),
-        level_indicator='|---',
-        empty_label="---",
+    category = CharField(
+        widget=HiddenInput(),
+        required=False,
     )
     source = ChoiceField(
         required=False,
@@ -811,32 +850,9 @@ class BaseAddAssetForm(DependencyAssetForm, ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.fieldsets = asset_fieldset()
-
-        mode = kwargs.get('mode')
-        if mode:
-            del kwargs['mode']
+        self.mode = kwargs.pop('mode', None)
         super(BaseAddAssetForm, self).__init__(*args, **kwargs)
-
-        category = self.fields['category'].queryset
-        if mode == "dc":
-            self.fields['model'].widget.plugin_options['add_link'] +=\
-                '&type=' + str(AssetType.data_center.id)
-            self.fields['model'].widget.channel = LOOKUPS['asset_dcmodel']
-            self.fields['type'].choices = [
-                (c.id, c.desc) for c in AssetType.DC.choices]
-            self.fields['category'].queryset = category.filter(
-                type=AssetCategoryType.data_center
-            )
-        elif mode == "back_office":
-            self.fields['model'].widget.plugin_options['add_link'] +=\
-                '&type=' + str(AssetType.back_office.id)
-            self.fields['model'].widget.channel = LOOKUPS['asset_bomodel']
-            self.fields['type'].choices = [
-                (c.id, c.desc) for c in AssetType.BO.choices]
-            self.fields['category'].queryset = category.filter(
-                type=AssetCategoryType.back_office
-            )
-
+        self.customize_fields()
         for readonly_field in (
             'company',
             'employee_id',
@@ -849,11 +865,17 @@ class BaseAddAssetForm(DependencyAssetForm, ModelForm):
 
     def clean_category(self):
         data = self.cleaned_data["category"]
-        if not data.parent:
+        if not data:
+            return data
+        try:
+            category = AssetCategory.objects.get(pk=data)
+        except AssetCategory.DoesNotExist:
+            raise ValidationError('"{}" is not proper category'.format(data))
+        if not category.parent:
             raise ValidationError(
                 _("Category must be selected from the subcategory")
             )
-        return data
+        return category
 
     def clean_imei(self):
         return self.cleaned_data['imei'] or None
@@ -862,7 +884,7 @@ class BaseAddAssetForm(DependencyAssetForm, ModelForm):
         return validate_production_year(self)
 
 
-class BaseEditAssetForm(DependencyAssetForm, ModelForm):
+class BaseEditAssetForm(DependencyAssetForm, AddEditAssetMixin, ModelForm):
     '''
         Base class to display form used to edit asset
     '''
@@ -873,7 +895,6 @@ class BaseEditAssetForm(DependencyAssetForm, ModelForm):
             'niw',
             'sn',
             'type',
-            'category',
             'imei',
             'model',
             'status',
@@ -946,10 +967,9 @@ class BaseEditAssetForm(DependencyAssetForm, ModelForm):
             add_link='/admin/ralph_assets/warehouse/add/?name=',
         )
     )
-    category = TreeNodeChoiceField(
-        queryset=AssetCategory.tree.all(),
-        level_indicator='|---',
-        empty_label="---",
+    category = CharField(
+        widget=HiddenInput(),
+        required=False,
     )
     source = ChoiceField(
         required=False,
@@ -995,24 +1015,9 @@ class BaseEditAssetForm(DependencyAssetForm, ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.fieldsets = asset_fieldset()
-        mode = kwargs.get('mode')
-        if mode:
-            del kwargs['mode']
+        self.mode = kwargs.pop('mode', None)
         super(BaseEditAssetForm, self).__init__(*args, **kwargs)
-        category = self.fields['category'].queryset
-        if mode == "dc":
-            self.fields['type'].choices = [
-                (c.id, c.desc) for c in AssetType.DC.choices]
-            self.fields['category'].queryset = category.filter(
-                type=AssetCategoryType.data_center
-            )
-        elif mode == "back_office":
-            self.fields['type'].choices = [
-                (c.id, c.desc) for c in AssetType.BO.choices]
-            self.fields['category'].queryset = category.filter(
-                type=AssetCategoryType.back_office
-            )
-
+        self.customize_fields()
         for readonly_field in (
             'company',
             'employee_id',
@@ -1028,11 +1033,17 @@ class BaseEditAssetForm(DependencyAssetForm, ModelForm):
 
     def clean_category(self):
         data = self.cleaned_data["category"]
-        if not data.parent:
+        if not data:
+            return data
+        try:
+            category = AssetCategory.objects.get(pk=data)
+        except AssetCategory.DoesNotExist:
+            raise ValidationError('"{}" is not proper category'.format(data))
+        if not category.parent:
             raise ValidationError(
                 _("Category must be selected from the subcategory")
             )
-        return data
+        return category
 
     def clean_production_year(self):
         return validate_production_year(self)
@@ -1041,6 +1052,7 @@ class BaseEditAssetForm(DependencyAssetForm, ModelForm):
         return self.cleaned_data['imei'] or None
 
     def clean(self):
+        self.cleaned_data = super(BaseEditAssetForm, self).clean()
         if self.instance.deleted:
             raise ValidationError(_("Cannot edit deleted asset"))
         cleaned_data = super(BaseEditAssetForm, self).clean()
@@ -1119,19 +1131,10 @@ class AddDeviceForm(BaseAddAssetForm, MultivalFieldForm):
             rest of multivalues.
         """
         cleaned_data = super(AddDeviceForm, self).clean()
-        if 'sn' in self.data or 'barcode' in self.data:
-            if self.different_multival_counters(cleaned_data):
-                for field in self.multival_fields:
-                    if field in cleaned_data:
-                        msg = "Fields: {} - require the same count".format(
-                            ', '.join(self.multival_fields)
-                        )
-                        self.errors.setdefault(field, []).append(msg)
-        else:
+        if not (self.data['sn'] or self.data['barcode']):
             msg = _('SN or BARCODE field is required')
             for field in ['sn', 'barcode']:
-                self.errors[field].append(msg) if field in self.errors else \
-                    [msg]
+                self.errors.setdefault(field, []).append(msg)
             self.different_multival_counters(cleaned_data)
         return cleaned_data
 
@@ -1230,11 +1233,6 @@ class SearchAssetForm(Form):
     :param mode: one of `dc` for DataCenter or `bo` for Back Office
     :returns Form
     """
-    model = AutoCompleteField(
-        LOOKUPS['asset_model'],
-        required=False,
-        help_text=None,
-    )
     manufacturer = AutoCompleteField(
         LOOKUPS['asset_manufacturer'],
         required=False,
@@ -1266,12 +1264,6 @@ class SearchAssetForm(Form):
         required=False,
         choices=[('', '----'), ('device', 'Device'), ('part', 'Part')],
         label='Asset type'
-    )
-    category = TreeNodeChoiceField(
-        required=False,
-        queryset=AssetCategory.tree.all(),
-        level_indicator='|---',
-        empty_label="---",
     )
     source = ChoiceField(
         required=False,
@@ -1434,19 +1426,8 @@ class SearchAssetForm(Form):
 
     def __init__(self, *args, **kwargs):
         # Ajax sources are different for DC/BO, use mode for distinguish
-        mode = kwargs.get('mode')
-        if mode:
-            del kwargs['mode']
+        self.mode = kwargs.pop('mode', None)
         super(SearchAssetForm, self).__init__(*args, **kwargs)
-        category = self.fields['category'].queryset
-        if mode == 'dc':
-            self.fields['category'].queryset = category.filter(
-                type=AssetCategoryType.data_center
-            )
-        elif mode == 'back_office':
-            self.fields['category'].queryset = category.filter(
-                type=AssetCategoryType.back_office
-            )
 
 
 class DataCenterSearchAssetForm(SearchAssetForm):
@@ -1455,9 +1436,37 @@ class DataCenterSearchAssetForm(SearchAssetForm):
         super(DataCenterSearchAssetForm, self).__init__(*args, **kwargs)
         self.fieldsets = asset_search_dc_fieldsets()
 
+    category = TreeNodeChoiceField(
+        required=False,
+        queryset=AssetCategory.tree.filter(
+            type=AssetCategoryType.data_center
+        ).all(),
+        level_indicator='|---',
+        empty_label="---",
+    )
+    model = AutoCompleteField(
+        LOOKUPS['asset_dcmodel'],
+        required=False,
+        help_text=None,
+    )
+
 
 class BackOfficeSearchAssetForm(SearchAssetForm):
+    category = TreeNodeChoiceField(
+        required=False,
+        queryset=AssetCategory.tree.filter(
+            type=AssetCategoryType.back_office
+        ).all(),
+        level_indicator='|---',
+        empty_label="---",
+    )
+
     imei = CharField(required=False, label='IMEI')
+    model = AutoCompleteField(
+        LOOKUPS['asset_bomodel'],
+        required=False,
+        help_text=None,
+    )
     purpose = ChoiceField(
         choices=[('', '----')] + models_assets.AssetPurpose(),
         label='Purpose',

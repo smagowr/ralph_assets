@@ -1,8 +1,35 @@
 Change Log
 ----------
 
+2.0.0-rc1
+~~~~~~~~~
+
+* Preparing to release a stable version
+* New Licence module
+* Improvement in asset fields
+* Simple transitions
+* Bug fixes
+
+
+1.4.3
+~~~~~~~
+
+* Added warning logger with cores count from ralph and assets
+
+
+1.4.2
+~~~~~~~
+
+* Changed AssetModel schema. Now height_of_device is a float field
+
+* Added to AssetModel column named cores_count
+
+* Changed in api_pricing conditions for getting assets
+
+
 1.4.1
 ~~~~~~~
+
 * Added Warehouse column to template bulk_edit file
 
 
@@ -32,7 +59,7 @@ Change Log
 
 1.3.0
 ~~~~~~~
- 
+
 * Fix bulk edit autocomplete
 
 * Added 25 as default value of deprecation_rate

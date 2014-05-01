@@ -14,7 +14,7 @@ ASSETS_COLUMNS = [
     'niw',
     'barcode',
     'sn',
-    'category__name',
+    'model__category__name',
     'model__manufacturer__name',
     'model__name',
     'user__username',
